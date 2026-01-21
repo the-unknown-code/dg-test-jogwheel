@@ -1,12 +1,27 @@
 <template>
 	<main class="page-index">
+		<div ref="$progress"
+			class="progress"></div>
 		<div id="jogwheel">
-			<div ref="$jogLeft">
+			<div class="jog-wheel left"
+				ref="$jogLeft">
 				<img src="/images/jog-wheel.png"
 					alt="Jogwheel"
 					draggable="false" />
 			</div>
-			<div ref="$jogRight">
+			<div class="fader">
+				<img ref="$rail"
+					class="rail"
+					src="/images/fader-rail.png"
+					alt="Fader"
+					draggable="false" />
+				<img ref="$item"
+					class="item"
+					src="/images/fader.png"
+					alt="Fader" />
+			</div>
+			<div class="jog-wheel right"
+				ref="$jogRight">
 				<img src="/images/jog-wheel.png"
 					alt="Jogwheel"
 					draggable="false" />
@@ -17,13 +32,18 @@
 </template>
 
 <script setup lang="ts">
-import { Draggable } from 'gsap/all';
+import gsap, { Draggable } from 'gsap/all';
 
+const $progress = ref<HTMLElement | null>(null);
 const $jogLeft = ref<HTMLElement | null>(null);
 const $jogRight = ref<HTMLElement | null>(null);
+const $rail = ref<HTMLElement | null>(null);
+const $item = ref<HTMLElement | null>(null);
 
 
-tryOnMounted(() => {
+tryOnMounted(async () => {
+	await nextTick();
+
 	Draggable.create($jogLeft.value, {
 		type: 'rotation',
 		inertia: true,
@@ -33,6 +53,37 @@ tryOnMounted(() => {
 		type: 'rotation',
 		inertia: true,
 	});
+
+
+	if ($rail.value && $item.value) {
+
+		Draggable.create($item.value, {
+			type: 'y',
+			bounds: {
+				minY: -64,
+				maxY: 64,
+			},
+			onDrag() {
+				// Normalize value (0 = bottom, 1 = top)
+
+				const progress = gsap.utils.normalize(
+					this.minY,
+					this.maxY,
+					this.y
+				);
+
+				const opacity = .1 - progress * .1;
+				console.log('Opacity:', opacity);
+
+				gsap.set($progress.value, {
+					opacity
+				});
+
+			},
+		});
+	}
+
+
 });
 </script>
 
@@ -42,36 +93,83 @@ tryOnMounted(() => {
 	background: linear-gradient(to top, #afafaf, white);
 	overflow: hidden;
 
+	.progress {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: black;
+		opacity: .05
+	}
+
 	#jogwheel {
 		position: absolute;
-		width: 160vw;
-		left: -30vw;
+		width: 100%;
+		aspect-ratio: 1;
 		bottom: 10vw;
 		display: flex;
-		justify-content: space-between;
+		justify-content: center;
 		align-items: center;
 
 		img {
-			pointer-events: none;
+
 			display: block;
 		}
 
-		>div {
+		.fader {
 			position: relative;
-			width: 50% !important;
-			flex: 0 0 50%;
-			aspect-ratio: 1/1;
+			display: flex;
+			flex-direction: column;
 
-			&:nth-child(1) {
-				left: 0;
-				transform: translateX(0%);
+			align-items: center;
+			justify-content: center;
+			z-index: 10;
+
+
+			img {
+				max-width: none;
 			}
 
-			&:nth-child(2) {
-				right: 0;
-				transform: translateX(0%);
+			.rail {
+				position: relative;
+				width: auto;
+				height: 150px;
+				pointer-events: none;
+			}
+
+			.item {
+				position: absolute;
+				width: 120px;
+				height: auto;
+				top: 50%;
+				transform: translateY(-50%);
+				cursor: grab;
+
+				&:active {
+					cursor: grabbing;
+				}
 			}
 		}
+
+		.jog-wheel {
+			position: absolute;
+			width: 90%;
+			flex: 0 0 90%;
+			aspect-ratio: 1/1;
+
+			&.left {
+				left: 0;
+				transform: translateX(-50%);
+			}
+
+			&.right {
+				right: 0;
+				transform: translateX(50%);
+			}
+		}
+
 	}
+
 }
 </style>
